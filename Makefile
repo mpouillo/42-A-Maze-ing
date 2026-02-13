@@ -3,6 +3,7 @@
 # ==============================================================
 
 NAME = a_maze_ing.py
+SRC = src
 
 .DEFAULT_GOAL = install
 
@@ -28,7 +29,6 @@ lint-strict:
 	mypy . --strict
 
 clean:
-	rm $(NAME)
 
 fclean: clean
 	conda init --reverse
