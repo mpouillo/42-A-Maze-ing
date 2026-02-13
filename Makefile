@@ -2,29 +2,39 @@
 #							A_MAZE_ING
 # ==============================================================
 
-NAME = a_maze_ing
+NAME = a_maze_ing.py
 
 .DEFAULT_GOAL = install
 
 .ONESHELL:
 install:
-	mkdir -p miniconda3
-	wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda3/miniconda.sh
-	bash miniconda3/miniconda.sh -b -u -p miniconda3
-	rm miniconda3/miniconda.sh
-	. miniconda3/bin/activate
-	conda init --all
-	conda install -c conda-forge xcb-util-keysyms
-	export C_INCLUDE_PATH=$(CONDA_PREFIX)/include
-	export LIBRARY_PATH=$(CONDA_PREFIX)/lib
-	$(MAKE) -C mlx_CLXV
+	wget https://cdn.intra.42.fr/document/document/45911/mlx-2.2-py3-ubuntu-any.whl
+	unzip mlx-2.2-py3-ubuntu-any.whl
+	rm mlx-2.2-py3-ubuntu-any.whl
 
-fclean:
+run:
+	python3 $(NAME)
+
+debug:
+	pdb $(NAME)
+
+lint:
+	flake8 .
+	mypy . --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
+
+lint-strict:
+	flake8 .
+	mypy . --strict
+
+clean:
+	rm $(NAME)
+
+fclean: clean
 	conda init --reverse
 	rm miniconda3
 	rm ~/.condarc
 	rm -rf ~/.conda
 
-re: install clean
+re: fclean install
 
-.PHONY: install fclean re
+.PHONY: install run debug clean fclean re
