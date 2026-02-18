@@ -36,7 +36,7 @@ def gen_maze() -> np.ndarray:
     maze: np.ndarray = np.full((HEIGHT, WIDTH), 15, dtype=np.uint8)
     visited: np.ndarray = np.zeros((HEIGHT, WIDTH), dtype=bool)
 
-    visited = create_logo(get_logo(), visited)
+    #visited = create_logo(get_logo(), visited)
 
     visited[ENTRY] = True
     stack: list = [ENTRY]
