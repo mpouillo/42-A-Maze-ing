@@ -160,7 +160,7 @@ def display_maze(filename: str) -> None:
             y += NODE_SIZE - LINE_WEIGHT
             x = 0
 
-    draw_path(maze_data)
+    ###draw_path(maze_data)
     draw_node_full(ENTRY[1] * (NODE_SIZE - LINE_WEIGHT),    # Entry point
                    ENTRY[0] * (NODE_SIZE - LINE_WEIGHT),
                    0xFF00FF00)  # Green
