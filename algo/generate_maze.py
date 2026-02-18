@@ -93,5 +93,4 @@ def generate_maze():
     write_maze(maze, filename)
     solve_maze = resolve_maze(maze)
     write_resolve(solve_maze, filename)
-    draw_maze(maze, 20)
     return filename
