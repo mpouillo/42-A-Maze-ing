@@ -6,9 +6,10 @@ from dotenv import load_dotenv
 import sys
 
 
-def parse_maze(filename) -> list[list]:
+def parse_maze(filename: str) -> dict:
     '''Parse file and return maze data as list of lists'''
     try:
+        data = {}
         array = []
         with open(filename, 'r') as maze_file:
             for line in maze_file:
@@ -18,13 +19,24 @@ def parse_maze(filename) -> list[list]:
                 for c in line.strip():
                     row.append(int(c, 16))
                 array.append(row)
-        return array
+            data.update({"maze": array})
+            data.update(
+                {"entry": tuple(
+                    int(c) for c in maze_file.readline().strip().split(",")
+                )}
+            )
+            data.update(
+                {"exit": tuple(
+                    int(c) for c in maze_file.readline().strip().split(",")
+                )}
+            )
+            data.update({"path": maze_file.readline().strip()})
+        return data
     except Exception as e:
-        print(f"Error while parsing maze output file: {e}")
-        sys.exit(0)
+        sys.exit(f"Error while parsing maze output file: {e}")
 
 
-def display_maze(filename: str):
+def display_maze(filename: str) -> None:
     # MLX setup
     m = Mlx()
     mlx_ptr = m.mlx_init()
@@ -36,24 +48,28 @@ def display_maze(filename: str):
     load_dotenv("config.txt")
 
     # Get maze data from file
-    MAZE = parse_maze(filename)
+    maze_data = parse_maze(filename)
+
+    ENTRY = maze_data.get("entry")
+    EXIT = maze_data.get("exit")
+    PATH = maze_data.get("path")
 
     # Get maze dimensions from config
     try:
         maze_width = int(os.environ.get("WIDTH"))
         maze_height = int(os.environ.get("HEIGHT"))
     except ValueError:
-        sys.exit(0)
+        sys.exit("Error while parsing config file")
 
     # Window dimensions
-    win_width = 1980
-    win_height = 1080
+    win_width, win_height = 1920, 1080
 
-    # 0.95 is a magic number to leave space around
+    # # 0.95 is a magic number to leave space around
     # SCALE_F = min(win_width / maze_width, win_height / maze_height) * 0.95
-    LINE_WEIGHT = 4
+    LINE_WEIGHT = 3
     NODE_SIZE = max(1, round(
-        min(maze_height, maze_width) / len(next(iter(MAZE), []))
+        min(maze_height, maze_width)
+        / len(next(iter(maze_data.get("maze")), []))
     ))
 
     win_ptr = m.mlx_new_window(mlx_ptr, win_width, win_height, "A-Maze-ing")
@@ -69,7 +85,10 @@ def display_maze(filename: str):
         data[offset + 2] = (color >> 16) & 0xFF     # Red
         data[offset + 3] = (color >> 24) & 0xFF     # Alpha
 
-    def draw_node(start_x: int, start_y: int, value: int, color: int) -> None:
+    def draw_node_outline(start_x: int,
+                          start_y: int,
+                          value: int,
+                          color: int) -> None:
         if (
             start_x + NODE_SIZE > maze_width
             or start_y + NODE_SIZE > maze_height
@@ -93,14 +112,62 @@ def display_maze(filename: str):
                 for y in range(NODE_SIZE):
                     draw_to_canvas(start_x + x, start_y + y, color)
 
-    x, y, i = 0, 0, 0
-    for row in MAZE:
-        for value in row:
-            i += 1
-            draw_node(x, y, value, 0xFFFFFFFF)
-            x += NODE_SIZE - LINE_WEIGHT
-        y += NODE_SIZE - LINE_WEIGHT
-        x = 0
+    def draw_node_full(start_x: int, start_y: int, color: int) -> None:
+        if (
+            start_x + NODE_SIZE > maze_width
+            or start_y + NODE_SIZE > maze_height
+        ):
+            return
+
+        for x in range(LINE_WEIGHT, NODE_SIZE - LINE_WEIGHT):
+            for y in range(LINE_WEIGHT, NODE_SIZE - LINE_WEIGHT):
+                draw_to_canvas(start_x + x, start_y + y, color)
+
+    def draw_path(maze_data) -> None:
+        BLUE = 0xFF0000FF
+
+        x = ENTRY[1] * (NODE_SIZE - LINE_WEIGHT)
+        y = ENTRY[0] * (NODE_SIZE - LINE_WEIGHT)
+
+        for direction in PATH:
+            print(x, y)
+            draw_node_full(x, y, BLUE)
+            match direction:
+                case "N":
+                    y -= LINE_WEIGHT
+                    draw_node_full(x, y, BLUE)
+                    y -= NODE_SIZE - 2 * LINE_WEIGHT
+                case "E":
+                    x -= LINE_WEIGHT
+                    draw_node_full(x, y, BLUE)
+                    x -= NODE_SIZE - 2 * LINE_WEIGHT
+                case "S":
+                    y += LINE_WEIGHT
+                    draw_node_full(x, y, BLUE)
+                    y += NODE_SIZE - 2 * LINE_WEIGHT
+                case "W":
+                    x += LINE_WEIGHT
+                    draw_node_full(x, y, BLUE)
+                    x += NODE_SIZE - 2 * LINE_WEIGHT
+
+    def draw_maze(maze_data):
+        x, y = 0, 0
+        MAZE = maze_data.get("maze")
+        for row in MAZE:
+            for value in row:
+                draw_node_outline(x, y, value, 0xFFFFFFFF)
+                x += NODE_SIZE - LINE_WEIGHT
+            y += NODE_SIZE - LINE_WEIGHT
+            x = 0
+
+    draw_path(maze_data)
+    draw_node_full(ENTRY[1] * (NODE_SIZE - LINE_WEIGHT),    # Entry point
+                   ENTRY[0] * (NODE_SIZE - LINE_WEIGHT),
+                   0xFF00FF00)  # Green
+    draw_node_full(EXIT[1] * (NODE_SIZE - LINE_WEIGHT),     # Exit point
+                   EXIT[0] * (NODE_SIZE - LINE_WEIGHT),
+                   0xFFFF0000)  # Red
+    draw_maze(maze_data)
 
     m.mlx_put_image_to_window(
         mlx_ptr, win_ptr, canvas_ptr,
